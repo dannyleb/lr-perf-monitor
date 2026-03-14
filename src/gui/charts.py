@@ -84,7 +84,7 @@ class ChartsWidget(QWidget):
     def update_tags(self, tags: List[EventTag], total_samples: int = 0):
         """Draw vertical marker lines on all charts for each event tag."""
         for plot in [self.cpu_plot, self.ram_plot, self.disk_plot]:
-            for item in list(plot.items):
+            for item in list(plot.items()):
                 if getattr(item, "_is_event_tag", False):
                     plot.removeItem(item)
 
