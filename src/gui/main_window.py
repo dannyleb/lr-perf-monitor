@@ -277,17 +277,20 @@ class MainWindow(QMainWindow):
         self.charts.update_tags(self.event_panel.get_tags(), self._snapshot_count)
 
         # Diagnostics
-        new_recs = self._diagnostics.feed(latest)
-        active_recs = self._diagnostics.get_active()
-        self.recommendations_panel.update_active(active_recs)
-        if new_recs:
-            self.recommendations_panel.add_log_entries(new_recs)
-            # Badge the tab if not currently selected
-            tab_idx = self.tabs.indexOf(self.recommendations_panel)
-            if self.tabs.currentIndex() != tab_idx and active_recs:
-                self.tabs.setTabText(tab_idx, f"💡  Recommendations ({len(active_recs)})")
-            else:
-                self.tabs.setTabText(tab_idx, "💡  Recommendations")
+        try:
+            new_recs = self._diagnostics.feed(latest)
+            active_recs = self._diagnostics.get_active()
+            print(f"[DIAG] active={len(active_recs)} new={len(new_recs)} lr_cpu={latest.process.cpu_percent if latest.process else 'N/A'} ram_pct={latest.system.memory_used_mb/163.84:.1f}%")
+            self.recommendations_panel.update_active(active_recs)
+            if new_recs:
+                self.recommendations_panel.add_log_entries(new_recs)
+                tab_idx = self.tabs.indexOf(self.recommendations_panel)
+                if self.tabs.currentIndex() != tab_idx and active_recs:
+                    self.tabs.setTabText(tab_idx, f"💡  Recommendations ({len(active_recs)})")
+                else:
+                    self.tabs.setTabText(tab_idx, "💡  Recommendations")
+        except Exception as e:
+            print(f"[DIAG ERROR] {e}")
 
     def _on_tag_added(self, tag):
         self.charts.update_tags(self.event_panel.get_tags(), self._snapshot_count)

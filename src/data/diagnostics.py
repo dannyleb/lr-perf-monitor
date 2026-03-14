@@ -205,7 +205,7 @@ class DiagnosticsEngine:
 
     def _check_disk(self, snap: CombinedSnapshot) -> List[Recommendation]:
         recs = []
-        write = snap.disk.write_mb_s
+        write = snap.disk.write_bytes_per_sec / (1024 * 1024)  # convert to MB/s
         if write >= self.DISK_WRITE_WARN_MB:
             r = Recommendation(
                 severity=Severity.WARNING,
@@ -293,7 +293,7 @@ class DiagnosticsEngine:
             to_remove.append("thermal")
 
         # Disk resolved
-        if snap.disk.write_mb_s < self.DISK_WRITE_WARN_MB:
+        if snap.disk.write_bytes_per_sec / (1024 * 1024) < self.DISK_WRITE_WARN_MB:
             to_remove.append("disk_write")
 
         # GPU integrated resolved (switched back to discrete)
