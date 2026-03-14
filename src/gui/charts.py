@@ -81,26 +81,32 @@ class ChartsWidget(QWidget):
         layout.addWidget(self.ram_plot)
         layout.addWidget(self.disk_plot)
 
-    def update_tags(self, tags: List[EventTag]):
+    def update_tags(self, tags: List[EventTag], total_samples: int = 0):
         """Draw vertical marker lines on all charts for each event tag."""
         for plot in [self.cpu_plot, self.ram_plot, self.disk_plot]:
             for item in list(plot.items):
                 if getattr(item, "_is_event_tag", False):
                     plot.removeItem(item)
 
+        # Chart x-axis starts at max(0, total_samples - MAX_POINTS)
+        window_start = max(0, total_samples - MAX_POINTS)
+
         for tag in tags:
             if tag.snapshot_index is None:
                 continue
-            x = min(tag.snapshot_index, MAX_POINTS - 1)
+            # Convert absolute snapshot index to chart-relative x position
+            x = tag.snapshot_index - window_start
+            if x < 0:
+                continue  # Tag is outside the visible window
             color = tag.color
             for plot in [self.cpu_plot, self.ram_plot, self.disk_plot]:
                 line = pg.InfiniteLine(
                     pos=x,
                     angle=90,
-                    pen=pg.mkPen(color, width=1.5, style=pg.QtCore.Qt.PenStyle.DashLine),
+                    pen=pg.mkPen(color, width=2, style=pg.QtCore.Qt.PenStyle.DashLine),
                     label=tag.operation.value,
                     labelOpts={
-                        "position": 0.95,
+                        "position": 0.90,
                         "color": color,
                         "fill": "#1e1e2e",
                         "border": color,

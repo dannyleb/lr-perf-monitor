@@ -266,10 +266,10 @@ class MainWindow(QMainWindow):
         self.sample_label.setText(f"Samples: {self._snapshot_count}")
         self.dashboard.update(latest)
         self.charts.update(history)
-        self.charts.update_tags(self.event_panel.get_tags())
+        self.charts.update_tags(self.event_panel.get_tags(), self._snapshot_count)
 
     def _on_tag_added(self, tag):
-        self.charts.update_tags(self.event_panel.get_tags())
+        self.charts.update_tags(self.event_panel.get_tags(), self._snapshot_count)
 
     def export_report(self):
         if not self._logger:
