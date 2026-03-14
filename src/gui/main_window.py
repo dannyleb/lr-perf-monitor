@@ -15,9 +15,11 @@ from PyQt6.QtGui import QFont, QColor, QPalette
 from .dashboard import DashboardWidget
 from .charts import ChartsWidget
 from .event_panel import EventPanel
+from .recommendations_panel import RecommendationsPanel
 from ..monitor.session import MonitorSession, CombinedSnapshot
 from ..data.logger import SessionLogger
 from ..data.exporter import export_csv, export_pdf
+from ..data.diagnostics import DiagnosticsEngine
 
 DARK_STYLE = """
 QMainWindow, QWidget {
@@ -112,6 +114,7 @@ class MainWindow(QMainWindow):
         self._session: MonitorSession | None = None
         self._logger: SessionLogger | None = None
         self._snapshot_count = 0
+        self._diagnostics = DiagnosticsEngine()
 
         self._build_ui()
         self._setup_timer()
@@ -175,9 +178,11 @@ class MainWindow(QMainWindow):
         self.charts = ChartsWidget()
         self.event_panel = EventPanel()
         self.event_panel.tag_added.connect(self._on_tag_added)
+        self.recommendations_panel = RecommendationsPanel()
         self.tabs.addTab(self.dashboard, "📊  Live Dashboard")
         self.tabs.addTab(self.charts, "📈  Charts")
         self.tabs.addTab(self.event_panel, "🏷  Event Tags")
+        self.tabs.addTab(self.recommendations_panel, "💡  Recommendations")
         root.addWidget(self.tabs)
 
         # --- Status bar ---
@@ -202,6 +207,7 @@ class MainWindow(QMainWindow):
     def start_monitoring(self):
         interval = self._get_interval()
         self._logger = SessionLogger()
+        self._diagnostics = DiagnosticsEngine()
         self._session = MonitorSession(
             interval_sec=interval,
             on_snapshot=self._on_snapshot,
@@ -219,6 +225,7 @@ class MainWindow(QMainWindow):
             lambda: self._snapshot_count
         )
         self.event_panel.set_active(True)
+        self.recommendations_panel.set_monitoring(True)
         self.status_bar.showMessage(f"Monitoring active — {interval}s interval")
 
     def stop_monitoring(self):
@@ -228,6 +235,7 @@ class MainWindow(QMainWindow):
             self._logger.close()
         self._ui_timer.stop()
         self.event_panel.set_active(False)
+        self.recommendations_panel.set_monitoring(False)
 
         self.start_btn.setEnabled(True)
         self.stop_btn.setEnabled(False)
@@ -267,6 +275,19 @@ class MainWindow(QMainWindow):
         self.dashboard.update(latest)
         self.charts.update(history)
         self.charts.update_tags(self.event_panel.get_tags(), self._snapshot_count)
+
+        # Diagnostics
+        new_recs = self._diagnostics.feed(latest)
+        active_recs = self._diagnostics.get_active()
+        self.recommendations_panel.update_active(active_recs)
+        if new_recs:
+            self.recommendations_panel.add_log_entries(new_recs)
+            # Badge the tab if not currently selected
+            tab_idx = self.tabs.indexOf(self.recommendations_panel)
+            if self.tabs.currentIndex() != tab_idx and active_recs:
+                self.tabs.setTabText(tab_idx, f"💡  Recommendations ({len(active_recs)})")
+            else:
+                self.tabs.setTabText(tab_idx, "💡  Recommendations")
 
     def _on_tag_added(self, tag):
         self.charts.update_tags(self.event_panel.get_tags(), self._snapshot_count)
